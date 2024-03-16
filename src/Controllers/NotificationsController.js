@@ -16,6 +16,7 @@ class NotificationsController {
             message: "OK"
         })
 
+        console.log( req.body.municipalities )
         await NotificationsController.sendNotifyManyByFilterV2(MongoClient, req.body.municipalities,req.body.professions,req.body.title, req.body.body, req.body.role,req.body.type??"comun")
 
     }
@@ -30,6 +31,8 @@ class NotificationsController {
 
         let citiesDocs = null
 
+        // console.log(cityObjectIds.length)
+
         if(cityObjectIds.length > 0){
             citiesDocs = await MongoClient.collection(DBNames.municipalities).find({
                 _id: { $in: cityObjectIds }
@@ -37,7 +40,8 @@ class NotificationsController {
         }else{
             citiesDocs = await MongoClient.collection(DBNames.municipalities).find({ }).toArray();
         }
-        
+
+        // console.log(citiesDocs)
         if(!citiesDocs){
             return false; 
         }
@@ -59,6 +63,7 @@ class NotificationsController {
 
                     let currentUser = await MongoClient.collection(DBNames.UserCopy).findOne({ id: parseInt(user.user_id) });
                     
+                    // console.log(currentUser.email)
                     if(currentUser ){
                         if(currentUser.current_role == role){
 
