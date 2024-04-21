@@ -1,6 +1,9 @@
 import moment from "moment";
 
+import 'moment/locale/es.js';
 
+// Configura moment.js para usar español
+moment.locale('es');
 class ReplaceableWordsController {
 
 

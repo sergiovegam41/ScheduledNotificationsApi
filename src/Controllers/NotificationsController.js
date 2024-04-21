@@ -58,26 +58,32 @@ class NotificationsController {
                 return false;
             }
 
-            users.forEach( async user => {
+            let notifiedUsers = [];
 
-                const professions_technical_details = await MongoClient.collection(DBNames.professions_technical_details).find({ technical_id: user.user_id.toString(), profession_id: { $in: professions??[] } }).toArray();
+            users.forEach( async user => {
+                let userID = parseInt(user.user_id.toString());
+                if( !notifiedUsers.includes( userID ) ){
+                    const professions_technical_details = await MongoClient.collection(DBNames.professions_technical_details).find({ technical_id: user.user_id.toString(), profession_id: { $in: professions??[] } }).toArray();
     
 
-                if (professions_technical_details.length > 0) {
+                    if (professions_technical_details.length > 0) {
+    
+                        let currentUser = await MongoClient.collection(DBNames.UserCopy).findOne({ id: parseInt(user.user_id) });
+                        
+                        // console.log(currentUser.email)
+                        if(currentUser ){
+                            if(currentUser.current_role == role){
+                                
+                                this.notificarByUser(MongoClient,FIREBASE_TOKEN, HostBotWhatsApp, TokenWebhook, currentUser, title, body,tipo, {},true );
+                                notifiedUsers.push(userID)
 
-                    let currentUser = await MongoClient.collection(DBNames.UserCopy).findOne({ id: parseInt(user.user_id) });
-                    
-                    // console.log(currentUser.email)
-                    if(currentUser ){
-                        if(currentUser.current_role == role){
-
-                            this.notificarByUser(MongoClient,FIREBASE_TOKEN, HostBotWhatsApp, TokenWebhook, currentUser, title, body,tipo );
-
+                            }
                         }
-                    }
-                   
-
-                } 
+                       
+    
+                    } 
+                }
+                
             })
         });
 
@@ -253,7 +259,7 @@ class NotificationsController {
 
     }   
 
-    static async notificarByUser(MongoClient,FIREBASE_TOKEN, HostBotWhatsApp, TokenWebhook, currentUser, title, body, tipo = "comun", dataNotify = {}){
+    static async notificarByUser(MongoClient,FIREBASE_TOKEN, HostBotWhatsApp, TokenWebhook, currentUser, title, body, tipo = "comun", dataNotify = {}, onlyPush = false){
 
         
         
@@ -287,15 +293,20 @@ class NotificationsController {
 
             })
 
-            let CurrentUserConfig = await UserConfigController.searchOrCreateByUserID(MongoClient,parseInt(userID)) 
+            if(onlyPush == false){
+
+                let CurrentUserConfig = await UserConfigController.searchOrCreateByUserID(MongoClient,parseInt(userID)) 
 
 
-            if(CurrentUserConfig.notyfyMeByWhatsApp){
-                WhatsAppController.sendMessageByPhone(HostBotWhatsApp,TokenWebhook,`${currentUser.country_code}${currentUser.phone}`, `*${topic.trim()}*\n${msj}` )
+                if(CurrentUserConfig.notyfyMeByWhatsApp){
+                    WhatsAppController.sendMessageByPhone(HostBotWhatsApp,TokenWebhook,`${currentUser.country_code}${currentUser.phone}`, `*${topic.trim()}*\n${msj}` )
+                }
+                if(CurrentUserConfig.notyfyMeByEmail){
+                    EmailsController.sendMailNotiFy(currentUser.email_aux,topic,msj);
+                }
+
             }
-            if(CurrentUserConfig.notyfyMeByEmail){
-                EmailsController.sendMailNotiFy(currentUser.email_aux,topic,msj);
-            }
+            
 
         
         } catch (error) {
