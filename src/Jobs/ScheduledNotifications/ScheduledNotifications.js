@@ -35,17 +35,7 @@ class ScheduledNotifications {
                 }
                 
                 
-                // static async sendNotifyManyByFilterV2(MongoClient, cities = ["649a034560043e9f434a94fe"], professions = ["64c553e73abc6c0ec50e1dc3"], title = "Hola! $[user_name];! bienvenido a Dservices ", body="Dservices te desea un feliz $[dayWeekName];!", role = "TECNICO", tipo="comun"){
-                    // await NotificationsController.sendNotifyManyByFilterV2(MongoClient,req,[session.location.municipality_id],[form.professions_id],`Nuevo servicio ${parseInt(priceService)>0?"~ "+cantidadFormateada: ""}`, `Hola $[user_name];, tenemos un Nuevo servicio disponible para ti ${main_address.value.district != ""?"en "+main_address.value.district:""}`, "TECNICO","new_services")
-                    console.log(AllCities);
-                    console.log(element.profession_filter);
-                    console.log(element.title);
-                    console.log(element.description);
-                    console.log(element.title);
-                    console.log("comun");
-               
-                    await NotificationsController.sendNotifyManyByFilterV2(MongoClient, AllCities, element.profession_filter, element.title, element.description, element.role,"comun")
-            //    await NotificationsController.sendNotifyManyByFilter(MongoClient,element.title,element.description,"comun",element)
+                await NotificationsController.sendNotifyManyByFilterV2(MongoClient, AllCities, element.profession_filter, element.title, element.description, element.role,"comun")
                 
             };
             
