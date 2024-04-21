@@ -91,13 +91,11 @@ class NotificationsController {
    
         console.log("sendNotifyMany")
 
-        await  this.sendNotifyManyByFilter(MongoClient, req.body.title, req.body.body,req.body.type, { profession_filter: req.body.profession_filter, delay: 0, unique: false, dayOfWeek:false })
+        await this.sendNotifyManyByFilter(MongoClient, req.body.title, req.body.body,req.body.type, { profession_filter: req.body.profession_filter, delay: 0, unique: false, dayOfWeek:false })
 
     }
 
     static async sendNotifyManyByFilter(MongoClient, title, body, tipo = "comun", scheduled_notifications) {
-
-        
 
         console.log('###NOTIFY MANYYY###')
         console.log(scheduled_notifications)
@@ -146,7 +144,7 @@ class NotificationsController {
     }
 
 
-    static async notifyAll(MongoClient, scheduled_notifications, FIREBASE_TOKEN, title, body, tipo = "comun", dayOfWeek) {
+    static async notifyAll(MongoClient, scheduled_notifications, FIREBASE_TOKEN, title, body, tipo = "comun", dayOfWeek, role = "TECNICO") {
 
         console.log(dayOfWeek)
         console.log("notify")
@@ -271,6 +269,7 @@ class NotificationsController {
             let msj = ReplaceableWordsController.replaceByUser(body, currentUser, dayOfWeek);
 
             let dispositivos = await MongoClient.collection(DBNames.notifyMeOrders).find({ notyfyMe: true,userID:  parseInt(userID) }).toArray()
+            console.log(dispositivos)
             await dispositivos.forEach(async dispositivo => {
 
                 if(dispositivo.notyfyMe){
