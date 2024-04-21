@@ -23,7 +23,6 @@ class NotificationsController {
 
     static async sendNotifyManyByFilterV2(MongoClient, cities = ["649a034560043e9f434a94fe"], professions = ["64c553e73abc6c0ec50e1dc3"], title = "Hola! $[user_name];! bienvenido a Dservices ", body="Dservices te desea un feliz $[dayWeekName];!", role = "TECNICO", tipo="comun"){
 
-        
         const FIREBASE_TOKEN = (await MongoClient.collection(DBNames.Config).findOne({ name: "FIREBASE_TOKEN" })).value;
         const TokenWebhook = (await MongoClient.collection(DBNames.Config).findOne({ name: "TokenWebhook" })).value;
         const HostBotWhatsApp = (await MongoClient.collection(DBNames.Config).findOne({ name: "HostBotWhatsApp" })).value;
