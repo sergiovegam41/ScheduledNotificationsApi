@@ -24,6 +24,7 @@ class NotificationsController {
     static async sendNotifyManyByFilterV2(MongoClient, cities = ["649a034560043e9f434a94fe"], professions = ["64c553e73abc6c0ec50e1dc3"], title = "Hola! $[user_name];! bienvenido a Dservices ", body="Dservices te desea un feliz $[dayWeekName];!", role = "TECNICO", tipo="comun"){
 
         
+        
         const FIREBASE_TOKEN = (await MongoClient.collection(DBNames.Config).findOne({ name: "FIREBASE_TOKEN" })).value;
         const TokenWebhook = (await MongoClient.collection(DBNames.Config).findOne({ name: "TokenWebhook" })).value;
         const HostBotWhatsApp = (await MongoClient.collection(DBNames.Config).findOne({ name: "HostBotWhatsApp" })).value;
@@ -50,30 +51,39 @@ class NotificationsController {
             
             
             let users = await MongoClient.collection(DBNames.technical_workplace).find({ municipality_id: citie._id.toString() }).toArray();
+            
+            // console.log(users)
 
             if(!users){
                 return false;
             }
 
+            let notifiedUsers = [];
+
             users.forEach( async user => {
-
-                const professions_technical_details = await MongoClient.collection(DBNames.professions_technical_details).find({ technical_id: user.user_id.toString(), profession_id: { $in: professions??[] } }).toArray();
+                let userID = parseInt(user.user_id.toString());
+                if( !notifiedUsers.includes( userID ) ){
+                    const professions_technical_details = await MongoClient.collection(DBNames.professions_technical_details).find({ technical_id: user.user_id.toString(), profession_id: { $in: professions??[] } }).toArray();
     
-                if (professions_technical_details.length > 0) {
 
-                    let currentUser = await MongoClient.collection(DBNames.UserCopy).findOne({ id: parseInt(user.user_id) });
-                    
-                    // console.log(currentUser.email)
-                    if(currentUser ){
-                        if(currentUser.current_role == role){
+                    if (professions_technical_details.length > 0) {
+    
+                        let currentUser = await MongoClient.collection(DBNames.UserCopy).findOne({ id: parseInt(user.user_id) });
+                        
+                        // console.log(currentUser.email)
+                        if(currentUser ){
+                            if(currentUser.current_role == role){
+                                
+                                this.notificarByUser(MongoClient,FIREBASE_TOKEN, HostBotWhatsApp, TokenWebhook, currentUser, title, body,tipo, {},true );
+                                notifiedUsers.push(userID)
 
-                            this.notificarByUser(MongoClient,FIREBASE_TOKEN, HostBotWhatsApp, TokenWebhook, currentUser, title, body,tipo );
-
+                            }
                         }
-                    }
-                   
-
-                } 
+                       
+    
+                    } 
+                }
+                
             })
         });
 
@@ -91,13 +101,11 @@ class NotificationsController {
    
         console.log("sendNotifyMany")
 
-        await  this.sendNotifyManyByFilter(MongoClient, req.body.title, req.body.body,req.body.type, { profession_filter: req.body.profession_filter, delay: 0, unique: false, dayOfWeek:false })
+        await this.sendNotifyManyByFilter(MongoClient, req.body.title, req.body.body,req.body.type, { profession_filter: req.body.profession_filter, delay: 0, unique: false, dayOfWeek:false })
 
     }
 
     static async sendNotifyManyByFilter(MongoClient, title, body, tipo = "comun", scheduled_notifications) {
-
-        
 
         console.log('###NOTIFY MANYYY###')
         console.log(scheduled_notifications)
@@ -146,7 +154,7 @@ class NotificationsController {
     }
 
 
-    static async notifyAll(MongoClient, scheduled_notifications, FIREBASE_TOKEN, title, body, tipo = "comun", dayOfWeek) {
+    static async notifyAll(MongoClient, scheduled_notifications, FIREBASE_TOKEN, title, body, tipo = "comun", dayOfWeek, role = "TECNICO") {
 
         console.log(dayOfWeek)
         console.log("notify")
@@ -251,7 +259,7 @@ class NotificationsController {
 
     }   
 
-    static async notificarByUser(MongoClient,FIREBASE_TOKEN, HostBotWhatsApp, TokenWebhook, currentUser, title, body, tipo = "comun", dataNotify = {}){
+    static async notificarByUser(MongoClient,FIREBASE_TOKEN, HostBotWhatsApp, TokenWebhook, currentUser, title, body, tipo = "comun", dataNotify = {}, onlyPush = false){
 
         
         
@@ -271,6 +279,7 @@ class NotificationsController {
             let msj = ReplaceableWordsController.replaceByUser(body, currentUser, dayOfWeek);
 
             let dispositivos = await MongoClient.collection(DBNames.notifyMeOrders).find({ notyfyMe: true,userID:  parseInt(userID) }).toArray()
+            console.log(dispositivos)
             await dispositivos.forEach(async dispositivo => {
 
                 if(dispositivo.notyfyMe){
@@ -284,15 +293,20 @@ class NotificationsController {
 
             })
 
-            let CurrentUserConfig = await UserConfigController.searchOrCreateByUserID(MongoClient,parseInt(userID)) 
+            if(onlyPush == false){
+
+                let CurrentUserConfig = await UserConfigController.searchOrCreateByUserID(MongoClient,parseInt(userID)) 
 
 
-            if(CurrentUserConfig.notyfyMeByWhatsApp){
-                WhatsAppController.sendMessageByPhone(HostBotWhatsApp,TokenWebhook,`${currentUser.country_code}${currentUser.phone}`, `*${topic.trim()}*\n${msj}` )
+                if(CurrentUserConfig.notyfyMeByWhatsApp){
+                    WhatsAppController.sendMessageByPhone(HostBotWhatsApp,TokenWebhook,`${currentUser.country_code}${currentUser.phone}`, `*${topic.trim()}*\n${msj}` )
+                }
+                if(CurrentUserConfig.notyfyMeByEmail){
+                    EmailsController.sendMailNotiFy(currentUser.email_aux,topic,msj);
+                }
+
             }
-            if(CurrentUserConfig.notyfyMeByEmail){
-                EmailsController.sendMailNotiFy(currentUser.email_aux,topic,msj);
-            }
+            
 
         
         } catch (error) {
