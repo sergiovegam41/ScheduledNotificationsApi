@@ -17,8 +17,11 @@ class ScheduledNotifications {
                 countrieHour += 24;
             }
 
+            // console.log("countrieHour: "+countrieHour)
+            
             let scheduled_notifications = await MongoClient.collection(DBNames.scheduled_notifications).find({ hour:countrieHour, country_id:countrie._id.toString() }).toArray();
-
+            
+            // console.log(scheduled_notifications)
             
             for (let element of scheduled_notifications ) {
                 
@@ -33,9 +36,16 @@ class ScheduledNotifications {
                     let cityIds = cities.map(city => city._id.toString()); // Transforma cada ciudad a su ID en formato string
                     AllCities.push(...cityIds); 
                 }
+
+                let profesionsList = element.profession_filter;
+
+                if( profesionsList == null || profesionsList == [] || profesionsList == ""){
+                    let professions = await MongoClient.collection(DBNames.professions).find({}).toArray();
+                    profesionsList = professions.map(profession => profession._id.toString());
+                }
                 
                 
-                await NotificationsController.sendNotifyManyByFilterV2(MongoClient, AllCities, element.profession_filter, element.title, element.description, element.role,"comun")
+                await NotificationsController.sendNotifyManyByFilterV2(MongoClient, AllCities, profesionsList, element.title, element.description, element.role,"comun")
                 
             };
             
