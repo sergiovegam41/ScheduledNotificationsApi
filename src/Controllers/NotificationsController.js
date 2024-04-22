@@ -23,13 +23,6 @@ class NotificationsController {
 
     static async sendNotifyManyByFilterV2(MongoClient, cities = ["649a034560043e9f434a94fe"], professions = ["64c553e73abc6c0ec50e1dc3"], title = "Hola! $[user_name];! bienvenido a Dservices ", body="Dservices te desea un feliz $[dayWeekName];!", role = "TECNICO", tipo="comun"){
 
-        // console.log(cities);
-        // console.log(professions);
-        // console.log(title);
-        // console.log(body);
-        // console.log(tipo);
-        // console.log(role);
-
         
         
         const FIREBASE_TOKEN = (await MongoClient.collection(DBNames.Config).findOne({ name: "FIREBASE_TOKEN" })).value;
@@ -69,10 +62,6 @@ class NotificationsController {
 
                 const professions_technical_details = await MongoClient.collection(DBNames.professions_technical_details).find({ technical_id: user.user_id.toString(), profession_id: { $in: professions??[] } }).toArray();
     
-                console.log("user: ");
-                console.log(user.user_id);
-                console.log("professions_technical_details: ");
-                console.log(professions_technical_details);
 
                 if (professions_technical_details.length > 0) {
 
