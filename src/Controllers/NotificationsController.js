@@ -23,8 +23,6 @@ class NotificationsController {
 
     static async sendNotifyManyByFilterV2(MongoClient, cities = ["649a034560043e9f434a94fe"], professions = ["64c553e73abc6c0ec50e1dc3"], title = "Hola! $[user_name];! bienvenido a Dservices ", body="Dservices te desea un feliz $[dayWeekName];!", role = "TECNICO", tipo="comun"){
 
-        
-        
         const FIREBASE_TOKEN = (await MongoClient.collection(DBNames.Config).findOne({ name: "FIREBASE_TOKEN" })).value;
         const TokenWebhook = (await MongoClient.collection(DBNames.Config).findOne({ name: "TokenWebhook" })).value;
         const HostBotWhatsApp = (await MongoClient.collection(DBNames.Config).findOne({ name: "HostBotWhatsApp" })).value;
@@ -65,23 +63,40 @@ class NotificationsController {
                 if( !notifiedUsers.includes( userID ) ){
                     const professions_technical_details = await MongoClient.collection(DBNames.professions_technical_details).find({ technical_id: user.user_id.toString(), profession_id: { $in: professions??[] } }).toArray();
     
-
-                    if (professions_technical_details.length > 0) {
+                    if( role == "TECNICO" ){
+                        if (professions_technical_details.length > 0) {
     
+                            let currentUser = await MongoClient.collection(DBNames.UserCopy).findOne({ id: parseInt(user.user_id) });
+                            
+                            // console.log(currentUser.email)
+                            if(currentUser ){
+                                if(currentUser.current_role == role){
+                                    
+                                    this.notificarByUser(MongoClient,FIREBASE_TOKEN, HostBotWhatsApp, TokenWebhook, currentUser, title, body,tipo, {},true );
+    
+                                }
+                            }
+                           
+        
+                        } 
+                    }else if(role == "CLIENTE" ){
+
                         let currentUser = await MongoClient.collection(DBNames.UserCopy).findOne({ id: parseInt(user.user_id) });
-                        
+                            
                         // console.log(currentUser.email)
                         if(currentUser ){
                             if(currentUser.current_role == role){
                                 
                                 this.notificarByUser(MongoClient,FIREBASE_TOKEN, HostBotWhatsApp, TokenWebhook, currentUser, title, body,tipo, {},true );
-                                notifiedUsers.push(userID)
 
                             }
                         }
-                       
-    
-                    } 
+
+                    }
+
+                    notifiedUsers.push(userID)
+
+                    
                 }
                 
             })

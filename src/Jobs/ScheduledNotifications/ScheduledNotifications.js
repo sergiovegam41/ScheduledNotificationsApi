@@ -39,9 +39,13 @@ class ScheduledNotifications {
 
                 let profesionsList = element.profession_filter;
 
-                if( profesionsList == null || profesionsList == [] || profesionsList == ""){
-                    let professions = await MongoClient.collection(DBNames.professions).find({}).toArray();
-                    profesionsList = professions.map(profession => profession._id.toString());
+                if(element.role == "TECNICO" || element.role == null || element.role == ""){
+
+                    if( profesionsList == null || profesionsList == [] || profesionsList == ""){
+                        let professions = await MongoClient.collection(DBNames.professions).find({}).toArray();
+                        profesionsList = professions.map(profession => profession._id.toString());
+                    }
+                    
                 }
                 
                 
