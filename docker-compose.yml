@@ -4,7 +4,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: schedulerNotifications-api
+    container_name: scheduler-notifications-api
     restart: unless-stopped
     networks:
       - my-external-network
