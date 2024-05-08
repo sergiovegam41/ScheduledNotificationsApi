@@ -5,6 +5,8 @@ import { ServerApiVersion, ObjectId } from 'mongodb';
 class UserConfigController {
 
 
+  
+  
   static async searchOrCreateByUserID(MongoClient, userID){
 
 
@@ -16,13 +18,11 @@ class UserConfigController {
     const user = await MongoClient.collection(DBNames.UserConfig).findOne({ userID:userID });
   
     if (!user) {
-      const newUser = {
+      return {
         userID: userID,
         notyfyMeByWhatsApp: false,
         notyfyMeByEmail: false
-
-      };
-      await MongoClient.collection(DBNames.UserConfig).insertOne(newUser);
+      }
     }
     
     return await MongoClient.collection(DBNames.UserConfig).findOne({ userID:userID });
