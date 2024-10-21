@@ -11,6 +11,7 @@ export default (app, MongoClient) => {
   app.post('/notifyByUserID/:id',  validationMiddleware ,async (req, res) => NotificationsController.notificarByUserApi(MongoClient,req,res))
   
   app.get('/ping', async function (req, res) {
+    // NotificationsController.sendNotify(MongoClient, "");
     return res.send(true)
   })
 
