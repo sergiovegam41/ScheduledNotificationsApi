@@ -17,6 +17,7 @@ class ScheduledNotifications {
                 countrieHour += 24;
             }
 
+
             // console.log("countrieHour: "+countrieHour)
             
             let scheduled_notifications = await MongoClient.collection(DBNames.scheduled_notifications).find({ hour:countrieHour, country_id:countrie._id.toString() }).toArray();
@@ -39,7 +40,7 @@ class ScheduledNotifications {
 
                 let profesionsList = element.profession_filter;
 
-                if(element.role == "TECNICO" || element.role == null || element.role == ""){
+                if(element.role == "TECNICO" || element.role == null || element.role == ""){ 
 
                     if( profesionsList == null || profesionsList == [] || profesionsList == ""){
                         let professions = await MongoClient.collection(DBNames.professions).find({}).toArray();

@@ -58,7 +58,12 @@ class NotificationsController {
             users.forEach( async user => {
                 let userID = parseInt(user.user_id.toString());
                 if( !notifiedUsers.includes( userID ) ){
-                    const professions_technical_details = await MongoClient.collection(DBNames.professions_technical_details).find({ technical_id: user.user_id.toString(), profession_id: { $in: professions??[] } }).toArray();
+                    const professions_technical_details = await MongoClient.collection(DBNames.professions_technical_details).find({ 
+                        active: true, // Solo trae documentos donde active es true
+                        technical_id: user.user_id.toString(), 
+                        profession_id: { $in: professions ?? [] } 
+                    }).toArray(); // # FILTRO DE PROFESIONES VINCULADAS
+                  
     
                     if( role == "TECNICO" ){
                         if (professions_technical_details.length > 0) {
@@ -179,7 +184,7 @@ class NotificationsController {
                     if (scheduled_notifications.profession_filter?.length > 0) {
 
                         
-                        const professions_technical_details = await MongoClient.collection(DBNames.professions_technical_details).find({ technical_id: element.userID.toString(), profession_id: { $in: scheduled_notifications.profession_filter } }).toArray();
+                        const professions_technical_details = await MongoClient.collection(DBNames.professions_technical_details).find({ technical_id: element.userID.toString(), profession_id: { $in: scheduled_notifications.profession_filter }, active: true }).toArray(); // # FILTRO DE PROFESIONES VINCULADAS
                         
                         if (professions_technical_details.length > 0) {
                             await this.sendNotify(MongoClient, FIREBASE_TOKEN, element.firebase_token, ReplaceableWordsController.replaceByUser(title, currentUser, dayOfWeek), ReplaceableWordsController.replaceByUser(body, currentUser, dayOfWeek), tipo)
