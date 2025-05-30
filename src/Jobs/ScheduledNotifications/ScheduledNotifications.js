@@ -3,7 +3,6 @@ import {DBNames} from './../../db.js';
 
 class ScheduledNotifications {
     static async run(MongoClient, hour, notificationsController = NotificationsController) {
-        console.log("hour: ", hour);
         const countries = await MongoClient.collection(DBNames.countries).find({}).toArray();
         for (const country of countries) {
             const countryHour = ScheduledNotifications.#calculateCountryHour(hour, country.offset_utc_timezone);

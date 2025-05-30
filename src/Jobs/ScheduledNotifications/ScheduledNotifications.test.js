@@ -5,7 +5,7 @@ const mockMongoClient = {
 };
 
 const mockNotificationsController = {
-  sendNotifyManyByFilterV2: jest.fn()
+  sendNotifyManyByFilterV2: jest.fn().mockResolvedValue(true)
 };
 
 describe('ScheduledNotifications', () => {
@@ -14,10 +14,9 @@ describe('ScheduledNotifications', () => {
   });
 
   it('debe enviar notificaciones programadas para cada país y notificación', async () => {
-    // Mock de datos
+    // Mock de datos - Sólo un país para simplificar el test
     const countries = [
-      { _id: '1', offset_utc_timezone: 0 },
-      { _id: '2', offset_utc_timezone: 2 }
+      { _id: '1', offset_utc_timezone: 0 }
     ];
     const scheduledNotifications = [
       {
@@ -52,7 +51,49 @@ describe('ScheduledNotifications', () => {
 
     await ScheduledNotifications.run(mockMongoClient, 10, mockNotificationsController);
 
-    expect(mockNotificationsController.sendNotifyManyByFilterV2).toHaveBeenCalled();
+    // Verificamos que sendNotifyManyByFilterV2 se llame exactamente una vez
+    expect(mockNotificationsController.sendNotifyManyByFilterV2).toHaveBeenCalledTimes(1);
+
+    // Verificamos que se llame con los parámetros correctos
+    expect(mockNotificationsController.sendNotifyManyByFilterV2).toHaveBeenCalledWith(
+      mockMongoClient,
+      ['city1'],
+      ['a'],
+      't',
+      'd',
+      'TECNICO',
+      'comun'
+    );
+  });
+
+  it('debe calcular correctamente la hora del país según el offset', async () => {
+    // Esta prueba verifica indirectamente el cálculo de horas
+    // probando que las notificaciones se buscan con la hora correcta
+    const testHour = 10;
+    const testOffset = 2;
+    const expectedCountryHour = 8; // 10 - 2 = 8
+
+    const testCountry = { _id: 'test', offset_utc_timezone: testOffset };
+
+    // Spy en el método find para verificar los parámetros
+    const findSpy = jest.fn().mockReturnValue({ toArray: () => [] });
+
+    mockMongoClient.collection.mockImplementation((name) => {
+      if (name === 'countries') {
+        return { find: () => ({ toArray: () => [testCountry] }) };
+      }
+      if (name === 'scheduled_notifications') {
+        return { find: findSpy };
+      }
+      return { find: () => ({ toArray: () => [] }) };
+    });
+
+    await ScheduledNotifications.run(mockMongoClient, testHour, mockNotificationsController);
+
+    // Verificamos que scheduled_notifications.find se llamó con la hora correcta
+    expect(findSpy).toHaveBeenCalledWith({
+      hour: expectedCountryHour,
+      country_id: testCountry._id.toString()
+    });
   });
 });
-

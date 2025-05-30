@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon ./src/index.js --exec babel-node",
-    "start": "babel-node ./src/index.js"
+    "start": "babel-node ./src/index.js",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:cronjobs": "node --experimental-vm-modules node_modules/jest/bin/jest.js src/Jobs/CronJobs.test.js --verbose"
   },
   "author": "",
   "license": "ISC",

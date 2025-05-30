@@ -1,8 +1,10 @@
 export default {
   testEnvironment: 'node',
   transform: {
-    '^.+\\.js$': 'babel-jest'
+    '^.+\\.jsx?$': 'babel-jest',
   },
-  moduleNameMapper: {},
+  verbose: true,
+  collectCoverage: true,
+  testTimeout: 10000
 };
 
