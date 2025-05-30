@@ -1,30 +1,30 @@
-import path  from "path"
+import path from "path";
 import nodemailer from "nodemailer";
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import {readFileSync} from 'fs';
+// Elimina el uso de import.meta.url para compatibilidad con Jest/Babel
+const __dirname = path.resolve();
+
 class EmailsController {
 
     static async sendMailNotiFy(to, title, description) {
         try {
-            
-        console.log(`Enviando email a ${to}, mensaje: ${title}`)
 
-        let path = __dirname + '\\..\\plantillas_email\\notify.html';
-        const html = readFileSync(path, "utf8");
+            console.log(`Enviando email a ${to}, mensaje: ${title}`)
 
-        const compiled = html.replace("{{title}}", title).replace("{{description}}", description)
+            let path = __dirname + '\\..\\plantillas_email\\notify.html';
+            const html = readFileSync(path, "utf8");
+
+            const compiled = html.replace("{{title}}", title).replace("{{description}}", description)
 
 
-        const content = {
-            subject: title,
-            html: compiled,
-        }
+            const content = {
+                subject: title,
+                html: compiled,
+            }
 
-        await this.sendMail(to, content)
+            await this.sendMail(to, content)
 
-        console.log("enviado")
+            console.log("enviado")
         } catch (error) {
             console.log("[ERROR EN EmailsController.sendMailNotiFy]")
             console.log(to)
@@ -35,12 +35,6 @@ class EmailsController {
 
     }
 
-   
-
-  
-
-
-    
 
     static async sendMail(to, content) {
 
@@ -67,7 +61,5 @@ class EmailsController {
 }
 
 
+export default EmailsController
 
-
-
-export default EmailsController 

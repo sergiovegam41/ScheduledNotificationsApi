@@ -1,65 +1,61 @@
 import NotificationsController from '../../Controllers/NotificationsController.js';
-import { DBNames } from './../../db.js';
-// import axios from 'axios';
+import {DBNames} from './../../db.js';
 
 class ScheduledNotifications {
-
-    static async run(MongoClient, hour){
-
-        console.log("hour: ",hour)
-
-        let countries = await MongoClient.collection(DBNames.countries).find({}).toArray()
-
-        for (let countrie of countries ) {
-
-           let countrieHour = (parseInt(hour) - parseInt(countrie.offset_utc_timezone) + 24) % 24;
-            if (countrieHour < 0) {
-                countrieHour += 24;
-            }
-
-            // console.log("countrieHour: "+countrieHour)
-            
-            let scheduled_notifications = await MongoClient.collection(DBNames.scheduled_notifications).find({ hour:countrieHour, country_id:countrie._id.toString() }).toArray();
-            
-            // console.log(scheduled_notifications)
-            
-            for (let element of scheduled_notifications ) {
-                
-                
-                let AllCities = []
-                let departments = await MongoClient.collection(DBNames.departments).find({ countri_id: element.country_id}).toArray();
-                
-                
-                for (let departament of departments ) {
-                    
-                    let cities = await MongoClient.collection(DBNames.municipalities).find({ departament_id: departament._id.toString()}).toArray();
-                    let cityIds = cities.map(city => city._id.toString()); // Transforma cada ciudad a su ID en formato string
-                    AllCities.push(...cityIds); 
-                }
-
-                let profesionsList = element.profession_filter;
-
-                if(element.role == "TECNICO" || element.role == null || element.role == ""){
-
-                    if( profesionsList == null || profesionsList == [] || profesionsList == ""){
-                        let professions = await MongoClient.collection(DBNames.professions).find({}).toArray();
-                        profesionsList = professions.map(profession => profession._id.toString());
+    static async run(MongoClient, hour, notificationsController = NotificationsController) {
+        console.log("hour: ", hour);
+        const countries = await MongoClient.collection(DBNames.countries).find({}).toArray();
+        for (const country of countries) {
+            const countryHour = ScheduledNotifications.#calculateCountryHour(hour, country.offset_utc_timezone);
+            const scheduledNotifications = await MongoClient.collection(DBNames.scheduled_notifications)
+                .find({hour: countryHour, country_id: country._id.toString()})
+                .toArray();
+            for (const notification of scheduledNotifications) {
+                const allCities = await ScheduledNotifications.#getAllCities(MongoClient, notification.country_id);
+                let professionsList = notification.profession_filter;
+                if (notification.role === "TECNICO" || !notification.role) {
+                    if (!professionsList || professionsList.length === 0) {
+                        professionsList = await ScheduledNotifications.#getAllProfessions(MongoClient);
                     }
-                    
                 }
-                
-                
-                await NotificationsController.sendNotifyManyByFilterV2(MongoClient, AllCities, profesionsList, element.title, element.description, element.role,"comun")
-                
-            };
-            
-        };
-
-
-        
-
+                await notificationsController.sendNotifyManyByFilterV2(
+                    MongoClient,
+                    allCities,
+                    professionsList,
+                    notification.title,
+                    notification.description,
+                    notification.role,
+                    "comun"
+                );
+            }
+        }
     }
- 
+
+    static #calculateCountryHour(hour, offset) {
+        let countryHour = (parseInt(hour) - parseInt(offset) + 24) % 24;
+        if (countryHour < 0) countryHour += 24;
+        return countryHour;
+    }
+
+    static async #getAllCities(MongoClient, countryId) {
+        const departments = await MongoClient.collection(DBNames.departments).find({countri_id: countryId}).toArray();
+        let allCities = [];
+        for (const department of departments) {
+            const cities = await MongoClient.collection(DBNames.municipalities)
+                .find({departament_id: department._id.toString()})
+                .toArray();
+            const cityIds = cities.map(city => city._id.toString());
+            allCities.push(...cityIds);
+        }
+        return allCities;
+    }
+
+    static async #getAllProfessions(MongoClient) {
+        const professions = await MongoClient.collection(DBNames.professions).find({}).toArray();
+        return professions.map(profession => profession._id.toString());
+    }
 }
 
-export default ScheduledNotifications 
+export default ScheduledNotifications;
+export {ScheduledNotifications}; // Para testing
+
