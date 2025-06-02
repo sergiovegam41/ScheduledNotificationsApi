@@ -55,6 +55,9 @@ export default (app, MongoClient) => {
     });
   });
 
+  // CronJobs.run(MongoClient,21)
+
+
 
   async function validationMiddleware(req, res, next) {
     try {

@@ -18,11 +18,11 @@ class ScheduledNotifications {
             }
 
 
-            // console.log("countrieHour: "+countrieHour)
+            console.log("countrieHour: "+countrieHour)
             
             let scheduled_notifications = await MongoClient.collection(DBNames.scheduled_notifications).find({ hour:countrieHour, country_id:countrie._id.toString() }).toArray();
             
-            // console.log(scheduled_notifications)
+            console.log(scheduled_notifications)
             
             for (let element of scheduled_notifications ) {
                 

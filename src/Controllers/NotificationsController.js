@@ -58,6 +58,9 @@ class NotificationsController {
             users.forEach( async user => {
                 let userID = parseInt(user.user_id.toString());
                 if( !notifiedUsers.includes( userID ) ){
+
+                    notifiedUsers.push(userID)
+
                     const professions_technical_details = await MongoClient.collection(DBNames.professions_technical_details).find({ 
                         active: true, // Solo trae documentos donde active es true
                         technical_id: user.user_id.toString(), 
@@ -65,7 +68,10 @@ class NotificationsController {
                     }).toArray(); // # FILTRO DE PROFESIONES VINCULADAS
                   
     
+
                     if( role == "TECNICO" ){
+
+
                         if (professions_technical_details.length > 0) {
     
                             let currentUser = await MongoClient.collection(DBNames.UserCopy).findOne({ id: parseInt(user.user_id) });
@@ -73,6 +79,7 @@ class NotificationsController {
                             if(currentUser ){
                                 if(currentUser.current_role == role){
                                     
+
                                     this.notificarByUser(MongoClient,FIREBASE_TOKEN, HostBotWhatsApp, TokenWebhook, currentUser, title, body,tipo, {},true );
     
                                 }
@@ -94,7 +101,6 @@ class NotificationsController {
 
                     }
 
-                    notifiedUsers.push(userID)
 
                     
                 }
@@ -251,7 +257,6 @@ class NotificationsController {
 
     static async notificarByUser(MongoClient,FIREBASE_TOKEN, HostBotWhatsApp, TokenWebhook, currentUser, title, body, tipo = "comun", dataNotify = {}, onlyPush = false){
 
-        
         
         if(!currentUser){
             return;
