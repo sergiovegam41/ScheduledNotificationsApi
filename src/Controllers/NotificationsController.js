@@ -6,6 +6,7 @@ import EmailsController from './EmailsController.js';
 import WhatsAppController from './WhatsAppController.js';
 import UserConfigController from './UserConfigController.js';
 import { ObjectId } from 'mongodb';
+import admin from "firebase-admin";
 
 class NotificationsController {
 
@@ -16,7 +17,6 @@ class NotificationsController {
             message: "OK"
         })
 
-        console.log( req.body.municipalities )
         await NotificationsController.sendNotifyManyByFilterV2(MongoClient, req.body.municipalities,req.body.professions,req.body.title, req.body.body, req.body.role,req.body.type??"comun")
 
     }
@@ -38,7 +38,6 @@ class NotificationsController {
 
         let citiesDocs = null
 
-        // console.log(cityObjectIds.length)
 
         if(cityObjectIds.length > 0){
             citiesDocs = await MongoClient.collection(DBNames.municipalities).find({
@@ -48,7 +47,6 @@ class NotificationsController {
             citiesDocs = await MongoClient.collection(DBNames.municipalities).find({ }).toArray();
         }
 
-        // console.log(citiesDocs)
         if(!citiesDocs){
             return false; 
         }
@@ -58,7 +56,6 @@ class NotificationsController {
             
             let users = await MongoClient.collection(DBNames.technical_workplace).find({ municipality_id: citie._id.toString() }).toArray();
             
-            // console.log(users)
 
             if(!users){
                 return false;
@@ -69,17 +66,28 @@ class NotificationsController {
             users.forEach( async user => {
                 let userID = parseInt(user.user_id.toString());
                 if( !notifiedUsers.includes( userID ) ){
-                    const professions_technical_details = await MongoClient.collection(DBNames.professions_technical_details).find({ technical_id: user.user_id.toString(), profession_id: { $in: professions??[] } }).toArray();
+
+                    notifiedUsers.push(userID)
+
+                    const professions_technical_details = await MongoClient.collection(DBNames.professions_technical_details).find({ 
+                        active: true, // Solo trae documentos donde active es true
+                        technical_id: user.user_id.toString(), 
+                        profession_id: { $in: professions ?? [] } 
+                    }).toArray(); // # FILTRO DE PROFESIONES VINCULADAS
+                  
     
+
                     if( role == "TECNICO" ){
+
+
                         if (professions_technical_details.length > 0) {
     
                             let currentUser = await MongoClient.collection(DBNames.UserCopy).findOne({ id: parseInt(user.user_id) });
                             
-                            // console.log(currentUser.email)
                             if(currentUser ){
                                 if(currentUser.current_role == role){
                                     
+
                                     this.notificarByUser(MongoClient,FIREBASE_TOKEN, HostBotWhatsApp, TokenWebhook, currentUser, title, body,tipo, {},true );
     
                                 }
@@ -91,7 +99,6 @@ class NotificationsController {
 
                         let currentUser = await MongoClient.collection(DBNames.UserCopy).findOne({ id: parseInt(user.user_id) });
                             
-                        // console.log(currentUser.email)
                         if(currentUser ){
                             if(currentUser.current_role == role){
                                 
@@ -102,7 +109,6 @@ class NotificationsController {
 
                     }
 
-                    notifiedUsers.push(userID)
 
                     
                 }
@@ -122,7 +128,6 @@ class NotificationsController {
         })
 
    
-        console.log("sendNotifyMany")
 
         await this.sendNotifyManyByFilter(MongoClient, req.body.title, req.body.body,req.body.type, { profession_filter: req.body.profession_filter, delay: 0, unique: false, dayOfWeek:false })
 
@@ -130,12 +135,9 @@ class NotificationsController {
 
     static async sendNotifyManyByFilter(MongoClient, title, body, tipo = "comun", scheduled_notifications) {
 
-        console.log('###NOTIFY MANYYY###')
-        console.log(scheduled_notifications)
 
         const FIREBASE_TOKEN = (await MongoClient.collection(DBNames.Config).findOne({ name: "FIREBASE_TOKEN" })).value;
 
-        console.log(FIREBASE_TOKEN)
 
         const now = moment();
         const dayOfWeek = now.day();
@@ -143,7 +145,6 @@ class NotificationsController {
 
         if (!scheduled_notifications.unique) {
 
-            console.log("!unico")
 
             if (scheduled_notifications.dayOfWeek) {
 
@@ -161,9 +162,6 @@ class NotificationsController {
 
         } else {
 
-            console.log("unico")
-            console.log(scheduled_notifications.date)
-            console.log(formattedDate)
 
             if (scheduled_notifications.date == formattedDate) {
                 
@@ -179,8 +177,6 @@ class NotificationsController {
 
     static async notifyAll(MongoClient, scheduled_notifications, FIREBASE_TOKEN, title, body, tipo = "comun", dayOfWeek, role = "TECNICO") {
 
-        console.log(dayOfWeek)
-        console.log("notify")
  
         let notifyMeOrders = await MongoClient.collection(DBNames.notifyMeOrders).find({ notyfyMe: true }).toArray()
 
@@ -188,38 +184,28 @@ class NotificationsController {
 
         setTimeout(async () => {
 
-            console.log("setTimeout: ", millisegundos)
 
             notifyMeOrders.forEach(async element => {
 
                try {
                 let currentUser = await MongoClient.collection(DBNames.UserCopy).findOne({ id: parseInt(element.userID) });
 
-                // console.log(currentUser)
-                console.log("userID: ",element.userID)
 
                 if (element.notyfyMe && element.firebase_token && currentUser) {
 
-                   console.log("notificarme, firebase y usuario")
-                   console.log("profession_filter: ",scheduled_notifications.profession_filter)
 
 
                     if (scheduled_notifications.profession_filter?.length > 0) {
 
-                        console.log("con filtro de profesion")
                         
-                        const professions_technical_details = await MongoClient.collection(DBNames.professions_technical_details).find({ technical_id: element.userID.toString(), profession_id: { $in: scheduled_notifications.profession_filter } }).toArray();
+                        const professions_technical_details = await MongoClient.collection(DBNames.professions_technical_details).find({ technical_id: element.userID.toString(), profession_id: { $in: scheduled_notifications.profession_filter }, active: true }).toArray(); // # FILTRO DE PROFESIONES VINCULADAS
                         
-                        console.log("professions_technical_details: ",professions_technical_details)
                         if (professions_technical_details.length > 0) {
-                            console.log("professions_technical_details DEL USUARIO:",element.userID)
                             await this.sendNotify(MongoClient, FIREBASE_TOKEN, element.firebase_token, ReplaceableWordsController.replaceByUser(title, currentUser, dayOfWeek), ReplaceableWordsController.replaceByUser(body, currentUser, dayOfWeek), tipo)
                         } else {
-                            console.log("no pertenece")
                         }
 
                     } else {
-                        console.log("A todos")
 
                         await this.sendNotify(MongoClient, FIREBASE_TOKEN, element.firebase_token, ReplaceableWordsController.replaceByUser(title, currentUser, dayOfWeek), ReplaceableWordsController.replaceByUser(body, currentUser, dayOfWeek), tipo)
 
@@ -227,13 +213,9 @@ class NotificationsController {
 
                 } else {
 
-                    console.log("usuario no encontrado")
  
                 }
                } catch (error) {
-                console.log("#####ERROR NOTIFICANDO####");
-                console.log(error);
-                console.log("##########################");
                }
             });
 
@@ -243,6 +225,7 @@ class NotificationsController {
 
     static async notificarByUserApi(MongoClient, req, res){
 
+
         let userID = req.params.id;
         let title = req.body.title
         let body = req.body.body
@@ -250,8 +233,6 @@ class NotificationsController {
         let data = req.body.data
 
 
-        console.log(tipo)
-        console.log(data)
 
         if(userID == "" || userID == null){
             return res.send({
@@ -285,13 +266,11 @@ class NotificationsController {
     static async notificarByUser(MongoClient,FIREBASE_TOKEN, HostBotWhatsApp, TokenWebhook, currentUser, title, body, tipo = "comun", dataNotify = {}, onlyPush = false){
 
         
-        
         if(!currentUser){
             return;
         }
         
         let userID = currentUser.id
-        console.log("Notificando usuario: ",currentUser)
 
         try {
             
@@ -302,12 +281,10 @@ class NotificationsController {
             let msj = ReplaceableWordsController.replaceByUser(body, currentUser, dayOfWeek);
 
             let dispositivos = await MongoClient.collection(DBNames.notifyMeOrders).find({ notyfyMe: true,userID:  parseInt(userID) }).toArray()
-            console.log(dispositivos)
             await dispositivos.forEach(async dispositivo => {
 
                 if(dispositivo.notyfyMe){
                     try {
-                        console.log(FIREBASE_TOKEN, dispositivo)
                         this.sendNotify(MongoClient,FIREBASE_TOKEN, dispositivo.firebase_token, topic, msj, tipo, dataNotify );
                     } catch (error) {
                         
@@ -335,15 +312,6 @@ class NotificationsController {
         } catch (error) {
             
 
-            console.log("[ERROR EN NotificationsController.notificarByUserID]")
-            console.log(userID)
-            console.log(FIREBASE_TOKEN)
-            console.log(HostBotWhatsApp)
-            console.log(TokenWebhook)
-            console.log(title)
-            console.log(body)
-            console.log(tipo)
-            console.log(error)
         }
 
     }
@@ -352,46 +320,52 @@ class NotificationsController {
 
     // }
 
+    static async sendNotify(MongoClient, FIREBASE_TOKEN, fcmToken, title, body, tipo = "comun", dataNotify = {}) {
+        try {
+            
+            console.log(fcmToken)
     
-    static async sendNotify(MongoClient,FIREBASE_TOKEN, fcmToken, title, body, tipo = "comun", dataNotify = {}) {
-
-        console.log(`Enviando notificacion a ${fcmToken}, mensaje: ${title} de tipo ${tipo} con data ${dataNotify}`)
-
-        const data = {
-            rules_version: '2',
-            notification: {
-                body: body,
-                title: title
-            },
-            priority: 'high',
-            data: {
-                click_action: 'FLUTTER_NOTIFICATION_CLICK',
-                body: body,
-                title: title,
-                data: dataNotify,
-                tipo: tipo
-            },
-            to: fcmToken
-        };
-
-        const headers = {
-            'Authorization': `key=${FIREBASE_TOKEN}`,
-            'Content-Type': 'application/json'
-        };
-
-        let resp = await http.post(`https://fcm.googleapis.com/fcm/send`, data, { headers: headers })
-
-        let statusCode = resp.status;
-        let responseBody = resp.data; 
-
-        // Now you can use these variables as needed
-        console.log(statusCode, responseBody.success);
-        if(resp.data.success != 1){
-            console.log(responseBody)
-            await MongoClient.collection(DBNames.notifyMeOrders).deleteOne({ firebase_token: fcmToken })
-
-
+            const message = {
+                token: fcmToken, // Reemplaza con el token del dispositivo
+                notification: {
+                  title: title,
+                  body: body,
+                },
+                android: {
+                  priority: 'high', // Establece la prioridad aquí para Android
+                },
+                apns: {
+                  headers: {
+                    'apns-priority': '10', // Establece la prioridad aquí para iOS
+                  },
+                },
+                data: {
+                  click_action: 'FLUTTER_NOTIFICATION_CLICK',
+                  body: body,
+                  title: title,
+                  data: JSON.stringify(dataNotify), // Asegúrate de que sea una cadena JSON
+                  tipo: tipo,
+                },
+              };
+    
+            // Enviar la notificación a través de Firebase
+            admin
+            .messaging()
+            .send(message)
+            .then((response) => {
+              console.log('Notificación enviada con éxito:', response); // Imprime la respuesta aquí
+            })
+            .catch((error) => {
+                 MongoClient.collection(DBNames.notifyMeOrders).deleteOne({ firebase_token: fcmToken })
+            });
+    
+        } catch (error) {
+            console.error("Error enviando notificación:", error);
         }
+    
+    
+          
+
 
     }
 
